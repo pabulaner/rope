@@ -9,6 +9,7 @@ namespace Rope {
 template <typename T>
 struct Node {
     /// The size of the node
+    /// The most significant bit indicates if it is an inner (1) or outer (0) node
     /// If it is a inner node the size is the size of all left children
     /// If it is a outer node the size is the size of the data
     size_t size;
@@ -64,11 +65,24 @@ public:
     // This rope is emptied durring the process
     std::pair<Rope<T>> split(size_t index);
 
-    // Returns the char at the provided index
-    T& at(size_t index);
+    // Returns the data at the provided index
+    T& at(size_t index) const;
 
     // Returns the size of the rope
-    size_t size();
+    size_t size() const;
+
+private:
+    // Creates an inner node
+    static Inner<T>* createInner(Node<T>* left, Node<T>* right);
+
+    // Creates an outer node
+    static Outer<T>* createOuter(size_t size, T* data);
+
+    // Returns the size of the provided node
+    static size_t size(Node<T>* node);
+
+    // Returns true if the node is an inner node
+    static bool isInner(Node<T>* node);
 }
 
 } // namespace Rope

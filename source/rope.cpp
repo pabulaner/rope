@@ -20,7 +20,17 @@ Rope<T>::Rope(size_t size, T* data)
 
 template <typename T>
 Rope<T>::~Rope() {
-    
+
+}
+
+template <typename T>
+size_t Rope<T>::size(Node<T>* node) const {
+    return node->size & SIZE_MASK;
+}
+
+template <typename T>
+bool Rope<T>::isInner(Node<T>* node) const {
+    return node->size & SIZE_MASK;
 }
 
 } // namespace Rope
