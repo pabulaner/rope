@@ -1,7 +1,10 @@
+#include <iostream>
+
+#include "rope.hpp"
+
 int main(int argc, char** argv) {
-    Rope::Rope rope("Hello World");
-    
-    rope.insert(3, "what");
-    rope.remove(3, 5);
-    rope.split(6);
+    char* str = "abcd";
+
+    Rope::Rope<char> rope(4, str);
+    std::cout.write(rope.array(), rope.size());
 }
