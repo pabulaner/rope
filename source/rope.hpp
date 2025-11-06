@@ -1,214 +1,187 @@
 #pragma once
 
-#include <cstddef>
+#include <iostream>
+#include <memory>
 #include <utility>
-#include <functional>
 
-/// The rope namespace
-namespace Rope {
+namespace Util {
 
-/// The base class for inner and outer nodes
-template <typename T>
-struct Node {
-    /// True if it is an inner node
-    bool isInner;
-
-    /// The size of the node
-    size_t size;
-};
-
-/// A inner node of the rope
-template <typename T>
-struct Inner : public Node<T> {
-    /// The left child
-    Node<T>* left;
-
-    /// The right child
-    Node<T>* right;
-};
-
-// A outer node of the rope
-template <typename T>
-struct Outer : public Node<T> {
-    /// The data
-    T* data;
-};
-
-/// The rope data structure
-template <typename T>
+template <typename TData>
 class Rope {
 private:
-    /// The root node
-    Node<T>* root;
+    struct Node {
+        bool inner;
+        size_t size;
+    };
+
+    struct Inner : public Node {
+        Node* left;
+        Node* right;
+    };
+
+    struct Outer : public Node {
+        TData* data;
+    };
+
+    Node* root;
 
 public:
-    /// Constructs an empty rope
     Rope();
 
-    /// Constructs a rope with the provided string
-    Rope(size_t size, T* str);
+    Rope(size_t size, TData* data);
 
-    /// Destructor
     ~Rope();
 
-    /// Copy constructor
-    Rope(const Rope<T>& other);
+    Rope(const Rope<TData>& other);
 
-    /// Move constructor
-    Rope(Rope<T>&& other);
+    Rope(Rope<TData>&& other);
 
-    /// Copy assignment operator
-    Rope<T>& operator=(const Rope<T>& other);
+    Rope<TData>& operator=(const Rope<TData>& other);
 
-    /// Move assignment operator
-    Rope<T>& operator=(Rope<T>&& other);
+    Rope<TData>& operator=(Rope<TData>&& other);
 
-    // Appends the provided rope to the end
-    void append(Rope<T>&& other);
+    TData& operator[](size_t index) const;
 
-    // Inserts the provided rope at the provided index
-    void insert(size_t index, Rope<T>&& other);
+    void append(Rope<TData>&& other);
 
-    // Erases the string between the provided begin and end
+    void insert(size_t index, Rope<TData>&& other);
+
     void erase(size_t begin, size_t end);
 
-    // Clears the rope
     void clear();
 
-    // Splits the rope at the provided index
-    // This rope is emptied durring the process
-    std::pair<Rope<T>, Rope<T>> split(size_t index);
+    std::pair<Rope<TData>, Rope<TData>> split(size_t index);
 
-    // Returns an array with the entire data of the rope
-    T* array();
+    TData* array() const;
 
-    // Returns the data at the provided index
-    T& at(size_t index) const;
+    TData& at(size_t index) const;
 
-    // Returns the size of the rope
     size_t size() const;
 
 private:
-    // Creates an inner node
-    static Inner<T>* createInner(const Node<T>* left, const Node<T>* right);
+    static Inner* createInner(Node* left, Node* right);
 
-    // Creates an outer node
-    static Outer<T>* createOuter(size_t size, const T* data);
+    static Outer* createOuter(size_t size, TData* data);
 
-    // Copies the provided node
-    static Node<T>* copy(const Node<T>* node);
+    static Outer* createEmpty();
 
-    // Clears the provided node
-    static void clear(Node<T>* node);
+    static Node* copy(Node* node);
 
-    // Copies all data from the provided node into the provided pointer
-    static void array(Node<T>* node, T* begin);
+    static void clear(Node* node);
 
-    // Returns the data at the provided index for the provided node
-    static T& at(Node<T>* node, size_t index);
+    static void array(Node* node, TData* begin);
 
-    // Returns the size of the provided node
-    static size_t size(const Node<T>* node);
+    static TData& at(Node* node, size_t index);
+
+    static size_t size(Node* node);
+
+    template <typename TOther>
+    friend std::ostream& operator<<(std::ostream& os, const Rope<TOther>& rope);
 };
 
-template <typename T>
-Rope<T>::Rope() 
-    : root(nullptr)
+template <typename TData>
+Rope<TData>::Rope() 
+    : root(createEmpty())
 {
     // empty
 }
 
-template <typename T>
-Rope<T>::Rope(size_t size, T* data) 
+template <typename TData>
+Rope<TData>::Rope(size_t size, TData* data) 
     : root(createOuter(size, data))
 {
     // empty
 }
 
-template <typename T>
-Rope<T>::~Rope() {
+template <typename TData>
+Rope<TData>::~Rope() {
     clear();
 }
 
-template <typename T>
-Rope<T>::Rope(const Rope<T>& other) 
+template <typename TData>
+Rope<TData>::Rope(const Rope<TData>& other) 
     : root(copy(other.root))
 {
     // empty
 }
 
-template <typename T>
-Rope<T>::Rope(Rope<T>&& other)
-    : root(other.root) 
+template <typename TData>
+Rope<TData>::Rope(Rope<TData>&& other) 
+    : root(other.root)
 {
     other.root = nullptr;
 }
 
-template <typename T>
-Rope<T>& Rope<T>::operator=(const Rope<T>& other) {
+template <typename TData>
+Rope<TData>& Rope<TData>::operator=(const Rope<TData>& other) {
     clear();
     root = copy(other.root);
+
+    return *this;
 }
 
-template <typename T>
-Rope<T>& Rope<T>::operator=(Rope<T>&& other) {
+template <typename TData>
+Rope<TData>& Rope<TData>::operator=(Rope<TData>&& other) {
     clear();
 
     root = other.root;
     other.root = nullptr;
+
+    return *this;
 }
 
-template <typename T>
-void Rope<T>::append(Rope<T>&& other) {
-
+template <typename TData>
+TData& Rope<TData>::operator[](size_t index) const {
+    return at(index);
 }
 
-template <typename T>
-void Rope<T>::insert(size_t index, Rope<T>&& other) {
+template <typename TData>
+void Rope<TData>::append(Rope<TData>&& other) {
+    root = createInner(root, other.root);
 }
 
-template <typename T>
-void Rope<T>::erase(size_t begin, size_t end) {
+template <typename TData>
+void Rope<TData>::insert(size_t index, Rope<TData>&& other) {
 }
 
-template <typename T>
-void Rope<T>::clear() {
-    if (root) {
-        clear(root);
-        root = nullptr;
-    }
+template <typename TData>
+void Rope<TData>::erase(size_t begin, size_t end) {
 }
 
-template <typename T>
-std::pair<Rope<T>, Rope<T>> Rope<T>::split(size_t index) {
-    return {{}, {}};
+template <typename TData>
+void Rope<TData>::clear() {
+    clear(root);
+    root = createEmpty();
 }
 
-template <typename T>
-T* Rope<T>::array() {
-    T* data = new T[size()];
+template <typename TData>
+std::pair<Rope<TData>, Rope<TData>> Rope<TData>::split(size_t index) {
+    return std::pair<Rope<TData>, Rope<TData>>();
+}
+
+template <typename TData>
+TData* Rope<TData>::array() const {
+    TData* data = new TData[size()];
     array(root, data);
 
     return data;
 }
 
-template <typename T>
-T& Rope<T>::at(size_t index) const {
-    
+template <typename TData>
+TData& Rope<TData>::at(size_t index) const {
+    return at(root, index);
 }
 
-template <typename T>
-size_t Rope<T>::size() const {
-    return root 
-        ? size(root) 
-        : 0;
+template <typename TData>
+size_t Rope<TData>::size() const {
+    return size(root);
 }
 
-template <typename T>
-Inner<T>* Rope<T>::createInner(const Node<T>* left, const Node<T>* right) {
-    Inner<T>* inner = new Inner<T>();
+template <typename TData>
+Rope<TData>::Inner *Rope<TData>::createInner(Node *left, Node *right) {
+    Inner* inner = new Inner();
 
-    inner->isInner = true;
+    inner->inner = true;
     inner->size = size(left);
     inner->left = left;
     inner->right = right;
@@ -216,85 +189,100 @@ Inner<T>* Rope<T>::createInner(const Node<T>* left, const Node<T>* right) {
     return inner;
 }
 
-template <typename T>
-Outer<T>* Rope<T>::createOuter(size_t size, const T* data) {
-    Outer<T>* outer = new Outer<T>();
+template <typename TData>
+Rope<TData>::Outer* Rope<TData>::createOuter(size_t size, TData* data) {
+    Outer* outer = new Outer();
 
-    outer->isInner = false;
+    outer->inner = false;
     outer->size = size;
     outer->data = data;
 
     return outer;
 }
 
-template <typename T>
-Node<T>* Rope<T>::copy(const Node<T>* node)
-{
-    if (node->isInner) {
-        Inner<T>* inner = (Inner<T>*) node;
-        Node<T>* left = copy(inner->left);
-        Node<T>* right = copy(inner->right);
+template <typename TData>
+Rope<TData>::Outer* Rope<TData>::createEmpty() {
+    return createOuter(0, nullptr);
+}
 
-        return createInner(left, right);
+template <typename TData>
+Rope<TData>::Node* Rope<TData>::copy(Node* node) {
+    if (node->inner) {
+        Inner* inner = (Inner*) node;
+        Node* left = copy(inner->left);
+        Node* right = copy(inner->right);
+
+        return createInner(left, inner);
     } else {
-        Outer<T>* outer = (Outer<T>*) node;
-        T* data = new T[outer->size];
-
-        std::copy(outer->data, outer->data + outer->size, data);
-        return createOuter(outer->size, data);
+        Outer* outer = (Outer*) node;
+        return createOuter(outer->size, outer->data);
     }
 }
 
-template <typename T>
-void Rope<T>::clear(Node<T>* node) {
-    if (node->isInner) {
-        Inner<T>* inner = (Inner<T>*) node;
+template <typename TData>
+void Rope<TData>::clear(Node* node) {
+    if (node->inner) {
+        Inner* inner = (Inner*) node;
 
         clear(inner->left);
         clear(inner->right);
     } else {
-        Outer<T>* outer = (Outer<T>*) node;
+        Outer* outer = (Outer*) node;
         delete outer->data;
     }
+
+    delete node;
 }
 
-template <typename T>
-void Rope<T>::array(Node<T>* node, T* begin) {
-    if (node->isInner) {
-        Inner<T>* inner = (Inner<T>*) node;
-        
-        array(node->left, begin);
-        array(node->right, begin + inner->size);
+template <typename TData>
+void Rope<TData>::array(Node* node, TData* begin) {
+    if (node->inner) {
+        Inner* inner = (Inner*) node;
+
+        array(inner->left, begin);
+        array(inner->right, begin + inner->size);
     } else {
-        Outer<T>* outer = (Outer<T>*) outer;
+        Outer* outer = (Outer*) node;
         std::copy(outer->data, outer->data + outer->size, begin);
     }
 }
 
-template <typename T>
-T& Rope<T>::at(Node<T>* node, size_t index) {
-    if (node->isInner) {
-        Inner<T>* inner = (Inner<T>*) node;
-
+template <typename TData>
+TData& Rope<TData>::at(Node* node, size_t index) {
+    if (node->inner) {
+        Inner* inner = (Inner*) node;
+        
         return index < inner->size
-            ? at(inner->left, index)
-            : at(inner->right, index - inner->size)
+            ? at(node->left, index)
+            : at(node->right, index - inner->size);
     } else {
-        Outer<T>* outer = (Outer<T>*) outer;
+        Outer* outer = (Outer*) node;
         return outer->data[index];
     }
 }
 
-template <typename T>
-size_t Rope<T>::size(const Node<T>* node) {
+template <typename TData>
+size_t Rope<TData>::size(Node* node) {
     size_t total = node->size;
 
-    if (node->isInner) {
-        Inner<T>* inner = (Inner<T>*) node;
+    if (node->inner) {
+        Inner* inner = (Inner*) node;
         total += size(inner->right);
     }
-    
+
     return total;
 }
 
-} // namespace Rope
+template <typename TOther>
+std::ostream& operator<<(std::ostream& os, const Rope<TOther>& rope) {
+    size_t size = rope.size();
+    TOther* data = rope.array();
+
+    for (size_t i = 0; i < size; i++) {
+        os << data[i];
+    }
+
+    return os;
+}
+
+} // namespace Util
