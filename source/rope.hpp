@@ -11,22 +11,6 @@ namespace Util {
 /// The rope data structure
 template <typename TData>
 class Rope {
-    /// Declaration of the node struct
-    struct Node;
-    /// Declaration of the inner struct
-    struct Inner;
-    /// Declaration of the outer struct
-    struct Outer;
-
-    /// Typedef of the data ptr
-    typedef std::unique_ptr<TData> DataPtr;
-    /// Typedef of the node ptr
-    typedef std::unique_ptr<Node> NodePtr;
-    /// Typedef of the inner ptr
-    typedef std::unique_ptr<Inner> InnerPtr;
-    /// Typedef of the outer ptr
-    typedef std::unique_ptr<Outer> OuterPtr;
-
     /// The base struct for inner and outer nodes
     struct Node {
         /// True if it is an inner node
@@ -38,15 +22,15 @@ class Rope {
     /// The inner node
     struct Inner : public Node {
         /// The left child of the inner node
-        NodePtr left;
+        Node* left;
         /// The right child of the inner node
-        NodePtr right;
+        Node* right;
     };
 
     /// The outer node
     struct Outer : public Node {
         /// The data of the node
-        DataPtr data;
+        TData* data;
     };
 
 public:
@@ -76,9 +60,12 @@ public:
 
 private:
     /// The root node
-    NodePtr root;
+    Node* root;
 
 public:
+    /// The constructor
+    Rope(size_t size, TData* data);
+
     /// Constructs an empty rope
     static Rope<TData> empty();
 
@@ -124,7 +111,7 @@ public:
     std::pair<Rope<TData>, Rope<TData>> split(size_t index);
 
     /// Creates an array containing the entire data of the rope
-    DataPtr array() const;
+    TData* array() const;
 
     /// Returns the data at the specified index
     TData& at(size_t index) const;
@@ -139,24 +126,22 @@ public:
     Iterator end();
 
 private:
-    static InnerPtr createInner(NodePtr left, NodePtr right);
+    static Inner* createInner(Node* left, Node* right);
 
-    static OuterPtr createOuter(size_t size, DataPtr data);
+    static Outer* createOuter(size_t size, TData* data);
 
-    static OuterPtr createEmpty();
+    static Node* copy(Node* node);
 
-    static NodePtr copy(NodePtr node);
+    static void clear(Node* node);
 
-    static void clear(NodePtr node);
+    static void array(Node* node, TData* begin);
 
-    static void array(NodePtr node, DataPtr begin);
+    static TData& at(Node* node, size_t index);
 
-    static TData& at(NodePtr node, size_t index);
-
-    static size_t size(NodePtr node);
+    static size_t size(Node* node);
 
     template <typename TOther>
-    friend std::ostream& operator<<(std::ostream& os, const Rope<TOther>& rope);
+    friend std::ostream& operator<<(std::ostream& os, Rope<TOther>& rope);
 };
 
 template <typename TData>
@@ -194,7 +179,8 @@ Rope<TData>::Iterator& Rope<TData>::Iterator::operator++() {
         index = 0;
 
         do {
-            node = nodes.pop();
+            node = nodes.top();
+            nodes.pop();
         } while (nodes.size() > 0 && static_cast<Inner*>(nodes.top())->right == node);
 
         if (nodes.size() > 0) {
@@ -232,11 +218,15 @@ bool Rope<TData>::Iterator::operator!=(const Iterator &other) {
 }
 
 template <typename TData>
-Rope<TData> Rope<TData>::empty() {
-    Rope<TData> rope;
-    rope.root = createEmpty();
+Rope<TData>::Rope(size_t size, TData* data) 
+    : root(createOuter(size, data))
+{
+    // empty
+}
 
-    return rope;
+template <typename TData>
+Rope<TData> Rope<TData>::empty() {
+    return Rope<TData>(0, nullptr);
 }
 
 template <typename TData>
@@ -249,10 +239,7 @@ Rope<TData> Rope<TData>::copy(size_t size, TData* data) {
 
 template <typename TData>
 Rope<TData> Rope<TData>::move(size_t size, TData* data) {
-    Rope<TData> rope;
-    rope.root = createOuter(size, data);
-
-    return Rope<TData>();
+    return Rope<TData>(size, data);
 }
 
 template <typename TData>
@@ -314,7 +301,7 @@ void Rope<TData>::erase(size_t begin, size_t end) {
 template <typename TData>
 void Rope<TData>::clear() {
     clear(root);
-    root = createEmpty();
+    root = createOuter(0, nullptr);
 }
 
 template <typename TData>
@@ -323,8 +310,8 @@ std::pair<Rope<TData>, Rope<TData>> Rope<TData>::split(size_t index) {
 }
 
 template <typename TData>
-Rope<TData>::DataPtr Rope<TData>::array() const {
-    DataPtr data = new TData[size()];
+TData* Rope<TData>::array() const {
+    TData* data = new TData[size()];
     array(root, data);
 
     return data;
@@ -341,8 +328,8 @@ size_t Rope<TData>::size() const {
 }
 
 template <typename TData>
-Rope<TData>::InnerPtr Rope<TData>::createInner(NodePtr left, NodePtr right) {
-    InnerPtr inner = std::make_unique<Inner>();
+Rope<TData>::Inner* Rope<TData>::createInner(Node* left, Node* right) {
+    Inner* inner = new Inner();
 
     inner->inner = true;
     inner->size = size(left);
@@ -353,44 +340,39 @@ Rope<TData>::InnerPtr Rope<TData>::createInner(NodePtr left, NodePtr right) {
 }
 
 template <typename TData>
-Rope<TData>::OuterPtr Rope<TData>::createOuter(size_t size, DataPtr data) {
-    OuterPtr outer = std::make_unique<Outer>();
+Rope<TData>::Outer* Rope<TData>::createOuter(size_t size, TData* data) {
+    Outer* outer = new Outer();
 
     outer->inner = false;
     outer->size = size;
-    outer->data = std::move(data);
+    outer->data = data;
 
     return outer;
 }
 
 template <typename TData>
-Rope<TData>::OuterPtr Rope<TData>::createEmpty() {
-    return createOuter(0, nullptr);
-}
-
-template <typename TData>
-Rope<TData>::NodePtr Rope<TData>::copy(NodePtr node) {
+Rope<TData>::Node* Rope<TData>::copy(Node* node) {
     if (node->inner) {
-        InnerPtr inner = static_cast<InnerPtr>(node);
-        NodePtr left = copy(inner->left);
-        NodePtr right = copy(inner->right);
+        Inner* inner = static_cast<Inner*>(node);
+        Node* left = copy(inner->left);
+        Node* right = copy(inner->right);
 
         return createInner(left, inner);
     } else {
-        OuterPtr outer = static_cast<OuterPtr>(node);
+        Outer* outer = static_cast<Outer*>(node);
         return createOuter(outer->size, outer->data);
     }
 }
 
 template <typename TData>
-void Rope<TData>::clear(NodePtr node) {
+void Rope<TData>::clear(Node* node) {
     if (node->inner) {
-        InnerPtr inner = static_cast<InnerPtr>(node);
+        Inner* inner = static_cast<Inner*>(node);
 
         clear(inner->left);
         clear(inner->right);
     } else {
-        OuterPtr outer = static_cast<OuterPtr>(node);
+        Outer* outer = static_cast<Outer*>(node);
         delete outer->data;
     }
 
@@ -398,38 +380,38 @@ void Rope<TData>::clear(NodePtr node) {
 }
 
 template <typename TData>
-void Rope<TData>::array(NodePtr node, DataPtr begin) {
+void Rope<TData>::array(Node* node, TData* begin) {
     if (node->inner) {
-        InnerPtr inner = static_cast<InnerPtr>(node);
+        Inner* inner = static_cast<Inner*>(node);
 
         array(inner->left, begin);
         array(inner->right, begin + inner->size);
     } else {
-        OuterPtr outer = static_cast<OuterPtr>(node);
+        Outer* outer = static_cast<Outer*>(node);
         std::copy(outer->data, outer->data + outer->size, begin);
     }
 }
 
 template <typename TData>
-TData& Rope<TData>::at(NodePtr node, size_t index) {
+TData& Rope<TData>::at(Node* node, size_t index) {
     if (node->inner) {
-        InnerPtr inner = static_cast<InnerPtr>(node);
+        Inner* inner = static_cast<Inner*>(node);
         
         return index < inner->size
             ? at(node->left, index)
             : at(node->right, index - inner->size);
     } else {
-        OuterPtr outer = static_cast<OuterPtr>(node);
+        Outer* outer = static_cast<Outer*>(node);
         return outer->data[index];
     }
 }
 
 template <typename TData>
-size_t Rope<TData>::size(NodePtr node) {
+size_t Rope<TData>::size(Node* node) {
     size_t total = node->size;
 
     if (node->inner) {
-        InnerPtr inner = static_cast<InnerPtr>(node);
+        Inner* inner = static_cast<Inner*>(node);
         total += size(inner->right);
     }
 
@@ -437,7 +419,7 @@ size_t Rope<TData>::size(NodePtr node) {
 }
 
 template <typename TOther>
-std::ostream& operator<<(std::ostream& os, const Rope<TOther>& rope) {
+std::ostream& operator<<(std::ostream& os, Rope<TOther>& rope) {
     for (TOther& value : rope) {
         os << value;
     }
