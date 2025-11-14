@@ -1,2 +1,2 @@
 test: source/rope.hpp
-	g++ test/test.cpp -o output/test -std=c++20
+	g++ -std=c++20 -fsanitize=address -g test/test.cpp -o output/test
