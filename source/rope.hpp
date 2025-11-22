@@ -33,6 +33,38 @@ class Rope {
         TData* data;
     };
 
+    /// The iterator for the rope
+    template <typename TOther>
+    class Iterator {
+        /// The stack of nodes
+        std::stack<Node*> nodes;
+
+        /// The index of the current data
+        size_t index;
+
+    public:
+        /// Constructs an end iterator
+        Iterator();
+
+        /// Constructs an iterator with the provided root
+        Iterator(Node* root);
+
+        /// Returns a ref to the current data
+        TOther& operator*() const;
+
+        /// Returns a pointer to the current data
+        TOther* operator->() const;
+
+        /// Increments this iterator
+        Iterator<TOther>& operator++();
+
+        /// Returns true if the two iterators are the same
+        bool operator!=(const Iterator<TOther>& other) const;
+    };
+
+    typedef Iterator<TData> Iter;
+    typedef Iterator<const TData> ConstIter;
+
 private:
     /// The root node
     Node* root;
@@ -98,6 +130,18 @@ public:
 
     /// Returns the size of the rope
     size_t size() const;
+
+    /// Returns the begin iterator
+    Iter begin();
+
+    /// Returns the end iterator
+    Iter end();
+
+    /// Returns the const begin iterator
+    ConstIter begin() const;
+
+    /// Returns the const end iterator
+    ConstIter end() const;
 
 private:
     static Node* createEmpty();
@@ -263,6 +307,26 @@ size_t Rope<TData>::size() const {
 }
 
 template <typename TData>
+Rope<TData>::Iter Rope<TData>::begin() {
+    return Iter(root);
+}
+
+template <typename TData>
+Rope<TData>::Iter Rope<TData>::end() {
+    return Iter();
+}
+
+template <typename TData>
+Rope<TData>::ConstIter Rope<TData>::begin() const {
+    return ConstIter(root);
+}
+
+template <typename TData>
+Rope<TData>::ConstIter Rope<TData>::end() const {
+    return ConstIter();
+}
+
+template <typename TData>
 Rope<TData>::Node* Rope<TData>::createEmpty() {
     return createOuter(0, nullptr);
 }
@@ -407,15 +471,88 @@ size_t Rope<TData>::size(Node* node) {
 
 template <typename TOther>
 std::ostream& operator<<(std::ostream& os, const Rope<TOther>& rope) {
-    TOther* data = rope.array();
-    size_t size = rope.size();
-
-    for (size_t i = 0; i < size; i++) {
-        os << data[i];
+    for (const TOther& data : rope) {
+        os << data;
     }
 
-    delete[] data;
     return os;
+}
+
+template <typename TData>
+template <typename TOther>
+Rope<TData>::Iterator<TOther>::Iterator() 
+    : nodes()
+    , index(0)
+{
+    // empty
+}
+
+template <typename TData>
+template <typename TOther>
+Rope<TData>::Iterator<TOther>::Iterator(Node *root)
+    : nodes()
+    , index(0)
+{
+    do {
+        nodes.push(root);
+    } while (root->inner && (root = static_cast<Inner*>(root)->left));
+}
+
+template <typename TData>
+template <typename TOther>
+TOther& Rope<TData>::Iterator<TOther>::operator*() const {
+    Outer* outer = static_cast<Outer*>(nodes.top());
+    return outer->data[index];
+}
+
+template <typename TData>
+template <typename TOther>
+TOther* Rope<TData>::Iterator<TOther>::operator->() const {
+    return &(*this);
+}
+
+template <typename TData>
+template <typename TOther>
+Rope<TData>::Iterator<TOther>& Rope<TData>::Iterator<TOther>::operator++() {
+    Node* node = nodes.top();
+    index += 1;
+
+    if (index == node->size) {
+        Inner* inner;
+        index = 0;
+
+        do {
+            nodes.pop();
+
+            if (nodes.empty()) {
+                return *this;
+            }
+
+            inner = static_cast<Inner*>(nodes.top());
+        } while (node == inner->right && (node = inner));
+
+        node = inner->right;
+
+        while (node->inner) {
+            inner = static_cast<Inner*>(node);
+            node = inner->left;
+        }
+    }
+
+    return *this;
+}
+
+template <typename TData>
+template <typename TOther>
+bool Rope<TData>::Iterator<TOther>::operator!=(const Iterator<TOther>& other) const {
+    Node* node = nodes.size() > 0
+        ? nodes.top()
+        : nullptr;
+    Node* otherNode = other.nodes.size() > 0
+        ? other.nodes.top()
+        : nullptr;
+
+    return node != otherNode || index != other.index;
 }
 
 } // namespace Util
