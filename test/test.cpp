@@ -1,7 +1,8 @@
 #include <cassert>
 #include <sstream>
 
-#include "../source/rope.hpp"
+// #include "../source/rope.hpp"
+#include "../source/tree.hpp"
 
 #define ASSERT_SIZE(actual, expected) assert(actual.size() == expected)
 
@@ -11,7 +12,7 @@
     assert(oss.str() == expected); \
 }
 
-char* heap(const char* str) {
+/*char* heap(const char* str) {
     size_t size = strlen(str);
     char* res = new char[size];
 
@@ -92,5 +93,11 @@ int main(int argc, char** argv) {
     testAppend();
     testSplit();
 
+    std::cout << "All tests completed!" << std::endl;
     return 0;
+}*/
+
+int main(int argc, char** argv) {
+    Rope::Rope<char> tree;
+    tree.append(Rope::Rope<char>());
 }

@@ -4,6 +4,7 @@
 #include <memory>
 #include <stack>
 #include <utility>
+#include "tree.hpp"
 
 /// The util namespace
 namespace Util {
@@ -174,7 +175,7 @@ Rope<TData>::Rope(Node* root)
 }
 
 template <typename TData>
-Rope<TData>::Rope(size_t size, TData* data) 
+Rope<TData>::Rope(size_t size, TData *data)
     : root(createOuter(size, data))
 {
     // empty
@@ -356,7 +357,8 @@ Rope<TData>::Outer* Rope<TData>::createOuter(size_t size, TData* data) {
 }
 
 template <typename TData>
-Rope<TData>::Node* Rope<TData>::copy(Node* node) {
+Rope<TData>::Node *Rope<TData>::copy(Node *node)
+{
     if (node->inner) {
         Inner* inner = static_cast<Inner*>(node);
         Node* left = copy(inner->left);
@@ -493,9 +495,11 @@ Rope<TData>::Iterator<TOther>::Iterator(Node *root)
     : nodes()
     , index(0)
 {
-    do {
-        nodes.push(root);
-    } while (root->inner && (root = static_cast<Inner*>(root)->left));
+    if (size(root) > 0) {
+        do {
+            nodes.push(root);
+        } while (root->inner && (root = static_cast<Inner*>(root)->left));
+    }
 }
 
 template <typename TData>
@@ -508,7 +512,7 @@ TOther& Rope<TData>::Iterator<TOther>::operator*() const {
 template <typename TData>
 template <typename TOther>
 TOther* Rope<TData>::Iterator<TOther>::operator->() const {
-    return &(*this);
+    return &(this->operator*());
 }
 
 template <typename TData>
